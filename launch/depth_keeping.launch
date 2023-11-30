@@ -1,0 +1,41 @@
+<launch>
+
+    <!-- Configurable arguments -->
+    <arg name="robot_name" default="sam"/>
+
+    <arg name="loop_freq" default="20."/>
+    <arg name="verbose_arg" default="True"/>
+
+
+    <!-- topics, note the root! -->
+    <arg name="state_estimation_topic" default="/$(arg robot_name)/slam/odom" />
+    <arg name="ref_pose_topic_arg" default="/$(arg robot_name)/ctrl/ref" />
+
+    <arg name="vbs_topic_arg" default="/$(arg robot_name)/core/vbs_cmd" />
+    <arg name="lcg_topic_arg" default="/$(arg robot_name)/core/lcg_cmd" />
+
+
+    <!-- Nodes -->
+    <node name="DepthKeepingController" pkg="depth_keeping" type="depthKeepingController.py"
+        output="screen" ns="$(arg robot_name)/ctrl">
+
+        <param name="loop_freq" value="$(arg loop_freq)"/>
+        <param name="verbose" value="$(arg verbose_arg)"/>
+
+        <!-- Subscriber State Topics  -->
+        <param name="ref_pose_topic" value="$(arg ref_pose_topic_arg)" />
+        <param name="state_estimation_topic" value="$(arg state_estimation_topic)" />
+
+        <!-- Publisher Actuator Topics -->
+        <param name="vbs_topic" value="$(arg vbs_topic_arg)" />
+        <param name="lcg_topic" value="$(arg lcg_topic_arg)" />
+
+        <!-- Publish Convenience Topics -->
+        <param name="ref_topic" value="/$(arg robot_name)/ctrl/setpoint" />
+        <param name="error_topic" value="/$(arg robot_name)/ctrl/error" />
+        <param name="state_topic" value="/$(arg robot_name)/ctrl/state" />
+        <param name="control_input_topic" value="/$(arg robot_name)/ctrl/control_input" />
+        <param name="control_neutral_topic" value="/$(arg robot_name)/ctrl/control_neutral" />
+    </node>
+
+</launch>
