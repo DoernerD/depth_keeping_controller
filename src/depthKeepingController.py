@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-# Copyright 2022 David Doerner (ddorner@kth.se)
+# Copyright 2023 David Doerner (ddorner@kth.se)
 
 from __future__ import division, print_function
 
@@ -30,7 +30,7 @@ class DepthKeepingController(object):
         verbose = rospy.get_param("~verbose", True)
 
         # Init
-        self.current_state = np.array([0., 0.])
+        self.current_state = np.array([0., 0., 0., 0., 0., 0.])
         self.z_ref = 0.
         self.pitch_ref = 0.
         self.ref = np.array([self.z_ref, self.pitch_ref])
@@ -132,7 +132,7 @@ class DepthKeepingController(object):
         """
         Get desired reference depth.
         """
-        self.ref[0] = depth_ref
+        self.ref[0] = depth_ref.data
         self.ref[1] = 0
 
 
@@ -184,12 +184,12 @@ class DepthKeepingController(object):
         """
         # Publish reference
         ref_msg = ControlState()
-        ref_msg.pose.x = self.ref[0]
-        ref_msg.pose.y = self.ref[1]
-        ref_msg.pose.z = self.ref[2]
-        ref_msg.pose.roll = self.ref[3]
-        ref_msg.pose.pitch = self.ref[4]
-        ref_msg.pose.yaw = self.ref[5]
+        ref_msg.pose.x = 0.0
+        ref_msg.pose.y = 0.0
+        ref_msg.pose.z = self.ref[0]
+        ref_msg.pose.roll = 0.0
+        ref_msg.pose.pitch = self.ref[1]
+        ref_msg.pose.yaw = 0.0
 
         ref_msg.vel.x = 0.0
         ref_msg.vel.y = 0.0
@@ -262,7 +262,7 @@ class DepthKeepingController(object):
         u = np.array([self.vbs_neutral,
                         self.lcg_neutral])
 
-        control_state = np.array([self.current_state[2], self.current_state[4]])
+        control_state = np.array([self.current_state[0], self.current_state[1]])
 
         self.error_prev = self.error
         self.error = self.ref - control_state

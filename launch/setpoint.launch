@@ -1,0 +1,30 @@
+<launch>
+
+    <!-- Arguments -->
+    <arg name="robot_name" default="sam"/>
+
+    <arg name="loop_freq" default="20."/>
+    <arg name="depth" default="2."/>
+    <arg name="duration" default="10."/>
+    
+
+    <!-- Topics -->
+    <arg name="setpoint_topic_arg" default="/$(arg robot_name)/ctrl/ref"/>
+    <arg name="trigger_topic_arg" default="/$(arg robot_name)/ctrl/trigger"/>
+
+    <!-- Nodes -->
+    <node name="setpoint_node" pkg="depth_keeping" type="setpointNode.py" output="screen">
+
+        <param name="loop_freq" value="$(arg loop_freq)"/>
+        <param name="depth_setpoint" value="$(arg depth)"/>
+        <param name="duration" value="$(arg duration)"/>
+
+        <!-- Subscriber Topics -->
+        <param name="trigger_topic" value="$(arg trigger_topic_arg)"/>
+
+        <!-- Publisher Topics -->
+        <param name="setpoint_topic" value="$(arg setpoint_topic_arg)"/>
+
+
+    </node>
+</launch>
