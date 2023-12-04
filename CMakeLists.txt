@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0.2)
-project(visual_feedback)
+project(depth_keeping)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
@@ -54,6 +54,7 @@ add_message_files(
   ControlInput.msg
   ControlError.msg
   State.msg
+  Setpoint.msg
 )
 
 ## Generate services in the 'srv' folder

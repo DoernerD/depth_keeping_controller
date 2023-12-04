@@ -14,7 +14,7 @@ from tf.transformations import euler_from_quaternion
 from std_msgs.msg import Float64
 from sam_msgs.msg import PercentStamped
 from nav_msgs.msg import Odometry
-from visual_feedback.msg import ControlState, ControlInput, ControlError
+from depth_keeping.msg import ControlState, ControlInput, ControlError
 
 
 class DepthKeepingController(object):
