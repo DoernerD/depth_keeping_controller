@@ -54,8 +54,8 @@ class DepthKeepingController(object):
         self.integral = np.array([0., 0.])
 
         # Neutral actuator inputs
-        self.vbs_neutral = 57.
-        self.lcg_neutral = 80.
+        self.vbs_neutral = 50.
+        self.lcg_neutral = 50.
 
         self.u_neutral = np.array([self.vbs_neutral,
                                   self.lcg_neutral])
@@ -262,7 +262,7 @@ class DepthKeepingController(object):
         u = np.array([self.vbs_neutral,
                         self.lcg_neutral])
 
-        control_state = np.array([self.current_state[0], self.current_state[1]])
+        control_state = np.array([self.current_state[2], self.current_state[4]])
 
         self.error_prev = self.error
         self.error = self.ref - control_state
