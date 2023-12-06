@@ -52,6 +52,7 @@ add_message_files(
   FILES
   ControlState.msg
   ControlInput.msg
+  ControlReference.msg
   ControlError.msg
   State.msg
   Setpoint.msg

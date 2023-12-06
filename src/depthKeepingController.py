@@ -14,7 +14,7 @@ from tf.transformations import euler_from_quaternion
 from std_msgs.msg import Float64
 from sam_msgs.msg import PercentStamped
 from nav_msgs.msg import Odometry
-from depth_keeping.msg import ControlState, ControlInput, ControlError
+from depth_keeping.msg import ControlState, ControlInput, ControlError, ControlReference
 
 
 class DepthKeepingController(object):
@@ -79,7 +79,7 @@ class DepthKeepingController(object):
         control_neutral_topic = rospy.get_param("~control_neutral_topic")
 
         # Subscribers to state feedback, setpoints and enable flags
-        rospy.Subscriber(ref_pose_topic, Float64, self.ref_callback, queue_size=1)
+        rospy.Subscriber(ref_pose_topic, ControlReference, self.ref_callback, queue_size=1)
         rospy.Subscriber(state_estimate_topic, Odometry, self.estimation_callback, queue_size=1)
 
         # Publisher to actuators
@@ -128,12 +128,12 @@ class DepthKeepingController(object):
         self.current_state = self.get_euler_from_quaternion(estim.pose)
 
 
-    def ref_callback(self, depth_ref):
+    def ref_callback(self, ref):
         """
         Get desired reference depth.
         """
-        self.ref[0] = depth_ref.data
-        self.ref[1] = 0
+        self.ref[0] = ref.depth
+        self.ref[1] = ref.pitch
 
 
     def get_euler_from_quaternion(self, pose):
