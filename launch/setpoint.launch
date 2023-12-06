@@ -6,8 +6,11 @@
     <arg name="loop_freq" default="20."/>
     
     <!-- Topics -->
+    <arg name="abort_topic_arg" default="/$(arg robot_name)/abort" />
+    <arg name="mission_topic_arg" default="/$(arg robot_name)/smarc_bt/mission_control" />
     <arg name="ref_topic_arg" default="/$(arg robot_name)/ctrl/ref"/>
     <arg name="setpoint_topic_arg" default="/$(arg robot_name)/ctrl/desired_setpoint"/>
+
 
     <!-- Nodes -->
     <node name="setpoint_node" pkg="depth_keeping" type="setpoint_node.py" output="screen">
@@ -15,6 +18,8 @@
         <param name="loop_freq" value="$(arg loop_freq)"/>
 
         <!-- Subscriber Topics -->
+        <param name="abort_topic" value="$(arg abort_topic_arg)" />
+        <param name="mission_topic" value="$(arg mission_topic_arg)" />
         <param name="setpoint_topic" value="$(arg setpoint_topic_arg)"/>
 
         <!-- Publisher Topics -->

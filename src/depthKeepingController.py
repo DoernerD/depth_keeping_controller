@@ -3,15 +3,13 @@
 
 from __future__ import division, print_function
 
-import curses
-import math
 import numpy as np
 
 import rospy
 
 from tf.transformations import euler_from_quaternion
 
-from std_msgs.msg import Float64
+from std_msgs.msg import Float64, Bool
 from sam_msgs.msg import PercentStamped
 from nav_msgs.msg import Odometry
 from depth_keeping.msg import ControlState, ControlInput, ControlError, ControlReference
@@ -41,10 +39,10 @@ class DepthKeepingController(object):
         self.vbs_Kd = 0.1
         self.vbs_Kaw = 1
 
-        self.lcg_Kp = 10
-        self.lcg_Ki = 0.1
-        self.lcg_Kd = 0.1
-        self.lcg_Kaw = 1
+        self.lcg_Kp = 100
+        self.lcg_Ki = 10
+        self.lcg_Kd = 1
+        self.lcg_Kaw = 0
 
         self.eps_depth = 0.6 # offset for depth control
         self.eps_pitch = 0.3 # offset for pitch control
@@ -65,6 +63,8 @@ class DepthKeepingController(object):
 
         self.limit_output_cnt = 0
 
+        self.abort = False
+
         # Topics for feedback and actuators
         vbs_topic = rospy.get_param("~vbs_topic", "/sam/core/vbs_cmd")
         lcg_topic = rospy.get_param("~lcg_topic", "/sam/core/lcg_cmd")
@@ -78,7 +78,10 @@ class DepthKeepingController(object):
         control_input_topic = rospy.get_param("~control_input_topic")
         control_neutral_topic = rospy.get_param("~control_neutral_topic")
 
+        abort_topic = rospy.get_param("~abort_topic")
+
         # Subscribers to state feedback, setpoints and enable flags
+        rospy.Subscriber(abort_topic, Bool, self.abort_callback, queue_size=1)
         rospy.Subscriber(ref_pose_topic, ControlReference, self.ref_callback, queue_size=1)
         rospy.Subscriber(state_estimate_topic, Odometry, self.estimation_callback, queue_size=1)
 
@@ -107,9 +110,10 @@ class DepthKeepingController(object):
 
             self.compute_anti_windup(u, u_limited)
 
-            self.publish_control_action(u_limited)
+            if not self.abort:
+                self.publish_control_action(u_limited)
 
-            self.publish_convenience_topics(u_limited)
+                self.publish_convenience_topics(u_limited)
 
             if verbose:
                 self.print_states(u, u_limited)
@@ -121,6 +125,16 @@ class DepthKeepingController(object):
 
 
     #region Call-backs
+    def abort_callback(self, abort):
+        """
+        Callback for abort message
+        """
+        self.abort = abort.data
+
+        if self.abort:
+            rospy.logwarn("Received Abort. Stop publishing anything.")
+
+
     def estimation_callback(self, estim):
         """
         Get the current state of the vehicle from the state estimation node.
@@ -350,17 +364,23 @@ class DepthKeepingController(object):
             # self.console.addstr(9,0, "Anti Windup Int: {}".format(np.array2string(self.anti_windup_diff_integral, precision = 2, floatmode = 'fixed')))
             # self.console.addstr(10,0, "")
             # self.console.refresh()
-            print("All in ENU: [z, pitch]")
-            print("")
-            print("Current States: {}".format(np.array2string(self.current_state, precision = 2, suppress_small = True, floatmode = 'fixed')))
-            print("Reference States: {}".format(np.array2string(self.ref, precision = 2, suppress_small = True, floatmode = 'fixed')))
-            print("Pitch Angle: {:.2f}, Depth Error: {:.2f}".format(self.error[1], self.error[0]))
-            print("")
-            print("[vbs, lcg]")
-            print("Control Input raw: {}".format(np.array2string(u, precision = 2, floatmode = 'fixed')))
-            print("Control Input lim: {}".format(np.array2string(u_limited, precision = 2, floatmode = 'fixed')))
-            print("Anti Windup Int: {}".format(np.array2string(self.anti_windup_diff_integral, precision = 2, floatmode = 'fixed')))
-            print("-----")
+            if not self.abort:
+                print("All in ENU: [z, pitch]")
+                print("")
+                print("Current States: {}".format(np.array2string(self.current_state, precision = 2, suppress_small = True, floatmode = 'fixed')))
+                print("Reference States: {}".format(np.array2string(self.ref, precision = 2, suppress_small = True, floatmode = 'fixed')))
+                print("Pitch Angle: {:.2f}, Depth Error: {:.2f}".format(self.error[1], self.error[0]))
+                print("")
+                print("[vbs, lcg]")
+                print("Control Input raw: {}".format(np.array2string(u, precision = 2, floatmode = 'fixed')))
+                print("Control Input lim: {}".format(np.array2string(u_limited, precision = 2, floatmode = 'fixed')))
+                print("Anti Windup Int: {}".format(np.array2string(self.anti_windup_diff_integral, precision = 2, floatmode = 'fixed')))
+                print("-----")
+            else:
+                print("")
+                print("EMERGECY PROTOCOL")
+                print("BT controls SAM")
+                print("-----")
 
 
 if __name__ == "__main__":

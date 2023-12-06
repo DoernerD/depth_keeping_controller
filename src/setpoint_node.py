@@ -5,7 +5,8 @@ Node to publish the setpoint for the depth controller for a certain duration.
 """
 
 import rospy
-from std_msgs.msg import Float64
+from std_msgs.msg import Float64, Bool
+from smarc_bt.msg import MissionControl
 from depth_keeping.msg import Setpoint, ControlReference
 
 
@@ -19,36 +20,44 @@ class SetpointPublisher:
         self.loop_frequency = rospy.get_param('~loop_frequency', 10.0)
 
         # Init
-        self.depth_setpoint = 0.0
         self.duration = 0.0
-
-        # Topics
-        setpoint_topic = rospy.get_param('~setpoint_topic', 'setpoint')
-        ref_topic = rospy.get_param('~ref_topic', 'trigger')
-
-        # Subscribers
-        rospy.Subscriber(setpoint_topic, Setpoint, self.setpoint_callback)
-
-        # Publishers
-        self.ref_pub = rospy.Publisher(ref_topic, ControlReference, queue_size=10)
-
-        # Init
-        rate = rospy.Rate(self.loop_frequency)  # 10 Hz
+        self.abort = False
+        self.mission_active = False
         self.triggered = False
         self.trigger_time = rospy.Time.now()
         self.ref = ControlReference()
         self.ref.depth = 0.0
         self.ref.pitch = 0.0
 
+        # Topics
+        abort_topic = rospy.get_param("~abort_topic")
+        mission_topic = rospy.get_param("~mission_topic")
+        setpoint_topic = rospy.get_param('~setpoint_topic', 'setpoint')
+        ref_topic = rospy.get_param('~ref_topic', 'ref')
+
+        # Subscribers
+        rospy.Subscriber(abort_topic, Bool, self.abort_callback, queue_size=1)
+        rospy.Subscriber(mission_topic, MissionControl, self.mission_callback, queue_size=1)
+        rospy.Subscriber(setpoint_topic, Setpoint, self.setpoint_callback, queue_size=1)
+
+        # Publishers
+        self.ref_pub = rospy.Publisher(ref_topic, ControlReference, queue_size=10)
+
+        # Init
+        
+
+        rate = rospy.Rate(self.loop_frequency)  # 10 Hz
+
+
         while not rospy.is_shutdown():
 
             if self.triggered:
-                if self.depth_setpoint > 0.0:
-                    rospy.loginfo("Setpoint is %f. SAM can't fly, change sign.", self.depth_setpoint)
+                if self.ref.depth > 0.0:
+                    rospy.loginfo("Setpoint is %f. SAM can't fly, change sign.", self.ref.depth)
                     self.triggered = False
                 else:
-                    if rospy.Time.now() - self.trigger_time < rospy.Duration(self.duration):
-                        rospy.loginfo("Triggered. Triggering setpoint %f", self.depth_setpoint)
+                    if (rospy.Time.now() - self.trigger_time < rospy.Duration(self.duration)) or self.mission_active:
+                        rospy.loginfo("Triggered. Triggering setpoint %.2f, %.2f", self.ref.depth, self.ref.pitch)
 
                         # Publish setpoint
                         self.ref_publisher(self.ref)
@@ -64,6 +73,32 @@ class SetpointPublisher:
                 self.ref_publisher(self.ref)  # Publish a setpoint of 0.0
 
             rate.sleep()
+
+
+    def abort_callback(self, abort):
+        """
+        Callback for abort message
+        """
+        self.abort = abort.data
+
+        if self.abort:
+            rospy.logwarn("Received Abort. Setting setpoint to 0.")
+            self.triggered = False
+            self.set_ref(0.0, 0.0)
+            self.ref_publisher(self.ref)  # Publish a setpoint of 0.0
+
+
+    def mission_callback(self, mission_status):
+        """
+        Callback for mission status
+        """
+
+        if mission_status.plan_state == 0:
+            rospy.logwarn("Received Mission Start. Timer disabled")
+            self.mission_active = True
+        else:
+            rospy.logwarn("Received Mission not Start. Timer enabled")
+            self.mission_active = False
 
 
     def setpoint_callback(self, setpoint):
