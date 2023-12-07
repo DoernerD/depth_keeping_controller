@@ -5,7 +5,7 @@ Node to publish the setpoint for the depth controller for a certain duration.
 """
 
 import rospy
-from std_msgs.msg import Float64, Bool
+from std_msgs.msg import Float64, Bool, Empty
 from smarc_bt.msg import MissionControl
 from depth_keeping.msg import Setpoint, ControlReference
 
@@ -36,7 +36,7 @@ class SetpointPublisher:
         ref_topic = rospy.get_param('~ref_topic', 'ref')
 
         # Subscribers
-        rospy.Subscriber(abort_topic, Bool, self.abort_callback, queue_size=1)
+        rospy.Subscriber(abort_topic, Empty, self.abort_callback, queue_size=1)
         rospy.Subscriber(mission_topic, MissionControl, self.mission_callback, queue_size=1)
         rospy.Subscriber(setpoint_topic, Setpoint, self.setpoint_callback, queue_size=1)
 
@@ -51,7 +51,7 @@ class SetpointPublisher:
 
         while not rospy.is_shutdown():
 
-            if self.triggered:
+            if self.triggered and not self.abort:
                 if self.ref.depth > 0.0:
                     rospy.loginfo("Setpoint is %f. SAM can't fly, change sign.", self.ref.depth)
                     self.triggered = False
@@ -65,12 +65,12 @@ class SetpointPublisher:
                         rospy.loginfo("Triggered for more than %f seconds. Triggering setpoint 0", self.duration)
                         # Publish setpoint 0
                         self.set_ref(0.0, 0.0)
-                        self.ref_publisher(self.ref)  # Publish a setpoint of 0.0
+                        self.ref_publisher(self.ref)
 
                         self.triggered = False
             else:
                 self.set_ref(0.0, 0.0)
-                self.ref_publisher(self.ref)  # Publish a setpoint of 0.0
+                self.ref_publisher(self.ref)
 
             rate.sleep()
 
@@ -79,10 +79,9 @@ class SetpointPublisher:
         """
         Callback for abort message
         """
-        self.abort = abort.data
-
-        if self.abort:
+        if abort:
             rospy.logwarn("Received Abort. Setting setpoint to 0.")
+            self.abort = True
             self.triggered = False
             self.set_ref(0.0, 0.0)
             self.ref_publisher(self.ref)  # Publish a setpoint of 0.0
@@ -96,6 +95,9 @@ class SetpointPublisher:
         if mission_status.plan_state == 0:
             rospy.logwarn("Received Mission Start. Timer disabled")
             self.mission_active = True
+        elif mission_status.plan_state == 5:
+            rospy.logwarn("Received Mission Complete.")
+            self.set_ref(0.0, 0.0)
         else:
             rospy.logwarn("Received Mission not Start. Timer enabled")
             self.mission_active = False

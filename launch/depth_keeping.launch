@@ -8,7 +8,7 @@
 
 
     <!-- topics, note the root! -->
-    <arg name="abort_topic_arg" default="/$(arg robot_name)/abort" />
+    <arg name="abort_topic_arg" default="/$(arg robot_name)/core/abort" />
     <arg name="state_estimation_topic" default="/$(arg robot_name)/dr/odom" />
     <arg name="ref_pose_topic_arg" default="/$(arg robot_name)/ctrl/ref" />
 

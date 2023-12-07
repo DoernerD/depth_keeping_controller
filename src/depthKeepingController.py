@@ -9,7 +9,7 @@ import rospy
 
 from tf.transformations import euler_from_quaternion
 
-from std_msgs.msg import Float64, Bool
+from std_msgs.msg import Float64, Bool, Empty
 from sam_msgs.msg import PercentStamped
 from nav_msgs.msg import Odometry
 from depth_keeping.msg import ControlState, ControlInput, ControlError, ControlReference
@@ -34,15 +34,15 @@ class DepthKeepingController(object):
         self.ref = np.array([self.z_ref, self.pitch_ref])
 
         # Control Gains
-        self.vbs_Kp = 10
-        self.vbs_Ki = 0.1
+        self.vbs_Kp = 40
+        self.vbs_Ki = 1
         self.vbs_Kd = 0.1
         self.vbs_Kaw = 1
 
         self.lcg_Kp = 100
         self.lcg_Ki = 10
         self.lcg_Kd = 1
-        self.lcg_Kaw = 0
+        self.lcg_Kaw = 1
 
         self.eps_depth = 0.6 # offset for depth control
         self.eps_pitch = 0.3 # offset for pitch control
@@ -81,7 +81,7 @@ class DepthKeepingController(object):
         abort_topic = rospy.get_param("~abort_topic")
 
         # Subscribers to state feedback, setpoints and enable flags
-        rospy.Subscriber(abort_topic, Bool, self.abort_callback, queue_size=1)
+        rospy.Subscriber(abort_topic, Empty, self.abort_callback, queue_size=1)
         rospy.Subscriber(ref_pose_topic, ControlReference, self.ref_callback, queue_size=1)
         rospy.Subscriber(state_estimate_topic, Odometry, self.estimation_callback, queue_size=1)
 
@@ -129,9 +129,8 @@ class DepthKeepingController(object):
         """
         Callback for abort message
         """
-        self.abort = abort.data
-
-        if self.abort:
+        if abort:
+            self.abort = True
             rospy.logwarn("Received Abort. Stop publishing anything.")
 
 
@@ -294,12 +293,12 @@ class DepthKeepingController(object):
 
         u[0] = self.vbs_Kp*self.error[0] \
                 + self.vbs_neutral \
-                + self.vbs_Ki*(self.integral[0] - self.anti_windup_diff_integral[0]) \
+                + self.vbs_Ki*(self.integral[0] + self.anti_windup_diff_integral[0]) \
                 + self.vbs_Kd*self.deriv[0]   # PID control vbs
 
         u[1] = self.lcg_Kp*self.error[1] \
                 + self.lcg_neutral \
-                + self.lcg_Ki*(self.integral[1] - self.anti_windup_diff_integral[1]) \
+                + self.lcg_Ki*(self.integral[1] + self.anti_windup_diff_integral[1]) \
                 + self.lcg_Kd*self.deriv[1]   # PID control lcg
 
         return u
@@ -310,6 +309,13 @@ class DepthKeepingController(object):
         Calculate the anti windup integral
         """
         self.anti_windup_diff_integral += (self.anti_windup_diff) * (1/self.loop_freq)
+
+
+    def compute_anti_windup(self, u, u_limited):
+        """
+        Compute anti wind up difference.
+        """
+        self.anti_windup_diff = np.array([self.vbs_Kaw, self.lcg_Kaw]) * (u_limited - u)
 
 
     def limit_control_action(self,u):
@@ -334,11 +340,6 @@ class DepthKeepingController(object):
         return u_limited
 
 
-    def compute_anti_windup(self, u, u_limited):
-        """
-        Compute anti wind up difference.
-        """
-        self.anti_windup_diff = np.array([self.vbs_Kaw, self.lcg_Kaw]) * (u_limited - u)
 
 
     def print_states(self, u, u_limited):
