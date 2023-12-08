@@ -36,7 +36,7 @@ class DepthKeepingController(object):
         # Control Gains
         self.vbs_Kp = 40
         self.vbs_Ki = 1
-        self.vbs_Kd = 0.1
+        self.vbs_Kd = 0.7
         self.vbs_Kaw = 1
 
         self.lcg_Kp = 100
