@@ -4,7 +4,7 @@
 from __future__ import division, print_function
 
 import numpy as np
-from scipy.signal import savgol_filter
+from scipy.signal import savgol_filter, sosfiltfilt, butter
 
 import rospy
 
@@ -33,7 +33,9 @@ class DepthKeepingController(object):
         self.z_ref = 0.
         self.pitch_ref = 0.
         self.ref = np.array([self.z_ref, self.pitch_ref])
-        self.pitch_array = np.array([0., 0., 0., 0., 0.])
+        self.pitch_array = np.zeros(20)
+        self.pitch_prev = 0.
+        self.sample_cnt = 0.
 
         # Control Gains
         self.vbs_Kp = 40
@@ -69,6 +71,16 @@ class DepthKeepingController(object):
         self.limit_output_cnt = 0
 
         self.abort = False
+
+        # Filter
+        # Filter requirements.
+        T = 5.0         # Sample Period
+        fs = 20.0       # sample rate, Hz
+        cutoff = 0.5      # desired cutoff frequency of the filter, Hz ,      slightly higher than actual 1.2 Hz
+        nyq = 0.5 * fs  # Nyquist Frequency
+        order = 2       # sin wave can be approx represented as quadratic
+        normal_cutoff = cutoff / nyq
+        self.sos = butter(order, normal_cutoff, output='sos')
 
         # Topics for feedback and actuators
         vbs_topic = rospy.get_param("~vbs_topic", "/sam/core/vbs_cmd")
@@ -145,6 +157,7 @@ class DepthKeepingController(object):
         """
         self.current_state = self.get_euler_from_quaternion(estim.pose)
 
+        # self.current_state[4] = self.downsample(self.current_state[4])
         self.current_state[4] = self.filter_pitch(self.current_state[4])
 
 
@@ -182,14 +195,35 @@ class DepthKeepingController(object):
 
     def filter_pitch(self, pitch):
         """
-        Filter pitch angle
+        Filter pitch angle.
+        Right now it's just a moving average over the last few samples. 
         """
 
         self.pitch_array = np.delete(self.pitch_array, 0)
         self.pitch_array = np.append(self.pitch_array, pitch)
-        pitch_filtered = savgol_filter(self.pitch_array, 5, 3)
 
-        return pitch_filtered[-1]
+        # pitch_filtered = savgol_filter(self.pitch_array, 5, 3)
+        # pitch_filtered = sosfiltfilt(self.sos, self.pitch_array)
+
+        pitch_average = np.sum(self.pitch_array)/len(self.pitch_array)
+
+        # return pitch_filtered[-1]
+        return pitch_average
+    
+    def downsample(self, pitch):
+        """
+        Downsample pitch to take every second sample
+        """
+        if self.sample_cnt % 5:
+            self.pitch_prev = pitch
+        #     self.sample_cnt = 1
+        # else:
+        self.sample_cnt += 1
+        
+        print("sample {}".format(self.sample_cnt))
+        return self.pitch_prev
+
+
 
     #endregion
 
