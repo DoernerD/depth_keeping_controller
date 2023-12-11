@@ -4,6 +4,7 @@
 from __future__ import division, print_function
 
 import numpy as np
+from scipy.signal import savgol_filter
 
 import rospy
 
@@ -32,6 +33,7 @@ class DepthKeepingController(object):
         self.z_ref = 0.
         self.pitch_ref = 0.
         self.ref = np.array([self.z_ref, self.pitch_ref])
+        self.pitch_array = np.array([0., 0., 0., 0., 0.])
 
         # Control Gains
         self.vbs_Kp = 40
@@ -39,10 +41,10 @@ class DepthKeepingController(object):
         self.vbs_Kd = 0.7
         self.vbs_Kaw = 1
 
-        self.lcg_Kp = 100
-        self.lcg_Ki = 10
-        self.lcg_Kd = 1
-        self.lcg_Kaw = 1
+        self.lcg_Kp = 70     # 100
+        self.lcg_Ki = 10     # 10
+        self.lcg_Kd = 1     # 1
+        self.lcg_Kaw = 1    # 1
 
         self.eps_depth = 0.6 # offset for depth control
         self.eps_pitch = 0.3 # offset for pitch control
@@ -57,6 +59,9 @@ class DepthKeepingController(object):
 
         self.u_neutral = np.array([self.vbs_neutral,
                                   self.lcg_neutral])
+        
+        self.u_prev = np.array([self.vbs_neutral,
+                                self.lcg_neutral])
 
         self.anti_windup_diff = np.array([0., 0.])
         self.anti_windup_diff_integral = np.array([0., 0.])
@@ -140,6 +145,8 @@ class DepthKeepingController(object):
         """
         self.current_state = self.get_euler_from_quaternion(estim.pose)
 
+        self.current_state[4] = self.filter_pitch(self.current_state[4])
+
 
     def ref_callback(self, ref):
         """
@@ -171,6 +178,19 @@ class DepthKeepingController(object):
         states = np.array([x, y, z, roll, pitch, yaw])
 
         return states
+
+
+    def filter_pitch(self, pitch):
+        """
+        Filter pitch angle
+        """
+
+        self.pitch_array = np.delete(self.pitch_array, 0)
+        self.pitch_array = np.append(self.pitch_array, pitch)
+        pitch_filtered = savgol_filter(self.pitch_array, 5, 3)
+
+        return pitch_filtered[-1]
+
     #endregion
 
 
@@ -179,9 +199,10 @@ class DepthKeepingController(object):
         """
         Publish the control action to the actuators.
         """
+        self.u_prev = u
+
         vbs = PercentStamped()
         lcg = PercentStamped()
-
 
         vbs.value = int(u[0])
         lcg.value = int(u[1])
@@ -336,6 +357,11 @@ class DepthKeepingController(object):
             u_limited[1] = 100
         if u_limited[1] < 0:
             u_limited[1] = 0
+
+        # lcg rate limit
+        # This is quite aggressive. Can we improve the controller to avoid this?
+        # if np.abs(u_limited[1] - self.u_prev[1]) < 1:
+        #     u_limited[1] = self.u_prev[1]
 
         return u_limited
 
