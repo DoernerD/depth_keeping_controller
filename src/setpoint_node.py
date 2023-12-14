@@ -95,12 +95,18 @@ class SetpointPublisher:
         if mission_status.plan_state == 0:
             rospy.logwarn("Received Mission Start. Timer disabled")
             self.mission_active = True
+
+        elif mission_status.plan_state == 3:
+            rospy.logwarn("Received Abort. Hands Off")
+
         elif mission_status.plan_state == 5:
             rospy.logwarn("Received Mission Complete.")
             self.set_ref(0.0, 0.0)
+
         else:
             rospy.logwarn("Received Mission not Start. Timer enabled")
             self.mission_active = False
+
 
 
     def setpoint_callback(self, setpoint):

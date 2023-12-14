@@ -209,7 +209,8 @@ class DepthKeepingController(object):
 
         # return pitch_filtered[-1]
         return pitch_average
-    
+
+
     def downsample(self, pitch):
         """
         Downsample pitch to take every second sample
@@ -219,7 +220,7 @@ class DepthKeepingController(object):
         #     self.sample_cnt = 1
         # else:
         self.sample_cnt += 1
-        
+
         print("sample {}".format(self.sample_cnt))
         return self.pitch_prev
 
