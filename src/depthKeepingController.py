@@ -43,7 +43,7 @@ class DepthKeepingController(object):
         self.vbs_Kd = 0.7
         self.vbs_Kaw = 1
 
-        self.lcg_Kp = 70     # 100
+        self.lcg_Kp = 200     # 100
         self.lcg_Ki = 10     # 10
         self.lcg_Kd = 1     # 1
         self.lcg_Kaw = 1    # 1
@@ -382,16 +382,16 @@ class DepthKeepingController(object):
         u_limited = u.copy()     # without .copy(), python only makes a shallow copy of the array.
 
         # vbs limit
-        if u_limited[0] > 100:
-            u_limited[0] = 100
-        if u_limited[0] < 0:
-            u_limited[0] = 0
+        if u_limited[0] > 95:
+            u_limited[0] = 95
+        if u_limited[0] < 5:
+            u_limited[0] = 5
 
         # lcg limit
-        if u_limited[1] > 100:
-            u_limited[1] = 100
-        if u_limited[1] < 0:
-            u_limited[1] = 0
+        if u_limited[1] > 95:
+            u_limited[1] = 95
+        if u_limited[1] < 5:
+            u_limited[1] = 5
 
         # lcg rate limit
         # This is quite aggressive. Can we improve the controller to avoid this?
