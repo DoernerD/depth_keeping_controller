@@ -52,7 +52,7 @@ class SetpointPublisher:
         while not rospy.is_shutdown():
 
             if self.triggered and not self.abort:
-                if self.ref.depth > 0.0:
+                if self.ref.depth > 0.5:
                     rospy.loginfo("Setpoint is %f. SAM can't fly, change sign.", self.ref.depth)
                     self.triggered = False
                 else:
@@ -61,7 +61,7 @@ class SetpointPublisher:
 
                         # Publish setpoint
                         self.ref_publisher(self.ref)
-                    else:
+                    else: 
                         rospy.loginfo("Triggered for more than %f seconds. Triggering setpoint 0", self.duration)
                         # Publish setpoint 0
                         self.set_ref(0.0, 0.0)
@@ -117,6 +117,8 @@ class SetpointPublisher:
         self.trigger_time = rospy.Time.now()
         self.set_ref(setpoint.depth, setpoint.pitch)
         self.duration = setpoint.duration
+
+        rospy.loginfo("setpoint cb")
 
         if not setpoint.trigger:
             rospy.loginfo("Received trigger false, setting setpoint to 0")

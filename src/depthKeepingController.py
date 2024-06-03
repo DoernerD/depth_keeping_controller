@@ -38,13 +38,13 @@ class DepthKeepingController(object):
         self.sample_cnt = 0.
 
         # Control Gains
-        self.vbs_Kp = 40
-        self.vbs_Ki = 1
+        self.vbs_Kp = 20
+        self.vbs_Ki = 0.5
         self.vbs_Kd = 0.7
         self.vbs_Kaw = 1
 
-        self.lcg_Kp = 200     # 100
-        self.lcg_Ki = 10     # 10
+        self.lcg_Kp = 100     # 100
+        self.lcg_Ki = 5     # 10
         self.lcg_Kd = 1     # 1
         self.lcg_Kaw = 1    # 1
 
@@ -56,7 +56,7 @@ class DepthKeepingController(object):
         self.integral = np.array([0., 0.])
 
         # Neutral actuator inputs
-        self.vbs_neutral = 50.
+        self.vbs_neutral = 40. #50.
         self.lcg_neutral = 50.
 
         self.u_neutral = np.array([self.vbs_neutral,
