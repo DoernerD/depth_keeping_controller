@@ -1,6 +1,6 @@
 # This is a YAML file, which stores a full setpoint message.
 # This works when called from the command line with
 #   rostopic pub -f setpoint.yaml /sam/ctrl/desired_setpoint depth_keeping/Setpoint -l
-depth: -1.5
+depth: -1.0
 duration: 100.0
 trigger: true
